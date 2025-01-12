@@ -35,59 +35,14 @@ body {
 
 /* Header Styling */
 h1 {
-  font-size: 80px;
-  font-weight: bold;
+  font-size: 80px; /* Larger font for ORCUS */
+  font-weight: bold; /* Bold font for ORCUS */
   text-align: center;
+  color: #e53935; /* Red for Orcus’ fiery theme */
   margin-bottom: 5px;
-  letter-spacing: 7px;
-  font-family: 'Piedra', sans-serif;
-  position: relative;
-  /* Darker, more blood-like gradient */
-  background: linear-gradient(90deg, #8B0000, #660000, #8B0000);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: bloodFlow 5s linear infinite, glow 3s ease-in-out infinite;
-}
-
-
-/* Blood flow animation */
-h1::before {
-  content: 'ORCUS';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, #e53935, #b71c1c, #e53935);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: bloodFlow 5s linear infinite;
-}
-
-/* Glow animation */
-@keyframes glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 5px #8B0000) 
-            drop-shadow(0 0 10px #8B0000) 
-            drop-shadow(0 0 15px #8B0000);
-  }
-  50% {
-    filter: drop-shadow(0 0 8px #a30000) 
-            drop-shadow(0 0 12px #a30000) 
-            drop-shadow(0 0 18px #a30000);
-  }
-}
-
-@keyframes bloodFlow {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
+  letter-spacing: 7px; /* Increased spacing for letters */
+  font-family: 'Piedra', sans-serif; /* Apply Piedra font */
+  animation: fadeIn 2s ease-in-out;
 }
 
 /* Acronym Styling */
