@@ -8,11 +8,15 @@
 }
 
 form {
-  width: 50vw; /* Make the form take up 50% of the viewport width */
+  width: 100%; /* Make the form take up 100% of the container width */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center the form content */
 }
 
 textarea {
   width: 100%;
+  max-width: 600px; /* Set a maximum width for the textarea */
   height: 180px;
   margin: 20px 0;
   padding: 12px;

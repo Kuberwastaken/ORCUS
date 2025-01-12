@@ -1,6 +1,7 @@
 # Run pip install -r requirements.txt to install all of the following packages
 flask
 flask-cors
-transformers
 torch
 emoji
+requests
+python-dotenv
