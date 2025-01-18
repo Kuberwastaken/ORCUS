@@ -9,7 +9,7 @@ ORCUS-WEB
 <img src="https://img.shields.io/badge/version-1.0-e53935" alt="Version 1.0">
 </p>
 
-Named after the Roman god of the underworld and the punisher of broken oaths, ORCUS is dedicated to upholding integrity and authenticity in the digital realm by flagging AI generated content disguised as normal comments
+Named after the Roman god of the underworld and the punisher of broken oaths, ORCUS is dedicated to upholding integrity and authenticity in the digital realm by flagging AI generated content disguised as normal comments.
 
 <p align="center">
 <a href="https://github.com/Kuberwastaken/ORCUS" target="kuberwastaken.github.io">Try ORCUS-Web</a>
