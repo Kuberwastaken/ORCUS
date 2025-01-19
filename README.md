@@ -1,7 +1,7 @@
 ![Orcus_Banner](https://github.com/Kuberwastaken/ORCUS/blob/main/public/readme-images/Orcus-Banner-Github.png?raw=true)
 
 <h1 align="center">
-  Observational Recognition of Content with Unnatural Speech
+  Observational Recognition of Content with Unnatural Speech.
 </h1>
 
 <p align="center">
