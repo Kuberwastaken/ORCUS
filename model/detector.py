@@ -1,22 +1,17 @@
-import os
-import requests
+from transformers import RobertaForSequenceClassification, RobertaTokenizer, GPT2LMHeadModel, GPT2Tokenizer
+import torch
 import re
 import random
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load the models and tokenizers
+MODEL_NAME = "roberta-base-openai-detector"
+tokenizer = RobertaTokenizer.from_pretrained(MODEL_NAME)
+model = RobertaForSequenceClassification.from_pretrained(MODEL_NAME)
 
-# Hugging Face Inference API URLs
-ROBERTA_API_URL = "https://api-inference.huggingface.co/models/roberta-base-openai-detector"
-GPT2_API_URL = "https://api-inference.huggingface.co/models/openai-community/gpt2"
-
-# Your Hugging Face API token
-API_TOKEN = os.getenv("HUGGING_FACE_API_TOKEN")
-
-headers = {
-    "Authorization": f"Bearer {API_TOKEN}"
-}
+# Load GPT-2 model and tokenizer
+gpt2_model_name = "openai-community/gpt2"
+gpt2_tokenizer = GPT2Tokenizer.from_pretrained(gpt2_model_name)
+gpt2_model = GPT2LMHeadModel.from_pretrained(gpt2_model_name)
 
 def highlight_most_ai_like_phrases(comment, top_k=1):
     """Highlight the most AI-like phrases."""
@@ -24,23 +19,19 @@ def highlight_most_ai_like_phrases(comment, top_k=1):
     scores = []
 
     for sentence in sentences:
-        response = requests.post(ROBERTA_API_URL, headers=headers, json={"inputs": sentence})
-        response.raise_for_status()
-        result = response.json()
-        print(f"Response for sentence '{sentence}': {result}")  # Debugging information
-        if isinstance(result, list) and len(result) > 0 and 'score' in result[0]:
-            ai_score = result[0]['score']
+        inputs = tokenizer(sentence, return_tensors="pt", truncation=True, max_length=512)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            ai_score = torch.softmax(logits, dim=1).tolist()[0][1]
             scores.append((sentence, ai_score))
-
-    # If no scores were calculated, return the original comment
-    if not scores:
-        return [comment]
 
     scores = sorted(scores, key=lambda x: x[1], reverse=True)[:top_k]
     return [sentence for sentence, _ in scores]
 
 def generate_dynamic_opening():
     """Generate a highly varied, catchy opening line with emojis using GPT-2."""
+    # (Previous creative elements remain the same)
     metaphors = [
         "circuits", "algorithms", "neural networks", "binary", "pixels", "quantum", 
         "cybernetic", "digital", "silicon", "matrix", "virtual", "synthetic",
@@ -81,38 +72,55 @@ def generate_dynamic_opening():
     prompt += "\n".join(f"{i+1}. {ex}" for i, ex in enumerate(examples))
     prompt += "\n\nCreate a completely new, original message:"
 
-    response = requests.post(GPT2_API_URL, headers=headers, json={"inputs": prompt, "parameters": {"max_new_tokens": 40, "num_return_sequences": 5}})
-    response.raise_for_status()
-    generated_texts = response.json()
-
-    cleaned_texts = []
-    for text in generated_texts:
-        generated_part = text['generated_text'].split("Create a completely new, original message:")[-1].strip()
-        generated_part = generated_part.split('\n')[0].strip()
-        
-        if (len(generated_part.split()) >= 5 and 
-            len(generated_part.split()) <= 20 and 
-            not any(ex in generated_part for ex in examples) and
-            any(word in generated_part.lower() for word in metaphors + actions + qualities)):
-            cleaned_texts.append(generated_part)
-
-    if cleaned_texts:
-        generated_text = random.choice(cleaned_texts)
-    else:
-        metaphor = random.choice(metaphors)
-        action = random.choice(actions)
-        quality = random.choice(qualities)
-        generated_text = f"This text appears to have been {action} with {quality} {metaphor} precision!"
-
-    emojis = ["⚡️", "🌌", "🔮", "🚀", "💫", "✨", "🤖", "🎯", "🎲", "🎮", "💻", "🔋", 
-              "⚙️", "🧠", "💡", "🔬", "📡", "🎱", "🎨", "🎭", "🎪", "🎢", "🎠"]
-    emoji_count = random.randint(1, 3)
-    selected_emojis = random.sample(emojis, emoji_count)
+    inputs = gpt2_tokenizer.encode(prompt, return_tensors="pt")
     
-    if not generated_text.endswith(("!", ".", "...")):
-        generated_text += random.choice(["!", "!!", "...!", "!?"])
+    # Modified generation parameters to use beam search
+    with torch.no_grad():
+        outputs = gpt2_model.generate(
+            inputs,
+            max_new_tokens=40,
+            num_beams=5,  # Number of beams for beam search
+            num_return_sequences=5,  # Now supported with beam search
+            temperature=random.uniform(0.85, 0.95),
+            top_k=random.randint(45, 55),
+            top_p=random.uniform(0.92, 0.98),
+            repetition_penalty=random.uniform(1.1, 1.3),
+            no_repeat_ngram_size=3,
+            early_stopping=True,  # Stop when all beam hypotheses reach the EOS token
+            pad_token_id=gpt2_tokenizer.eos_token_id
+        )
 
-    return f"{' '.join(selected_emojis)} {generated_text} {' '.join(random.sample(emojis, random.randint(1, 2)))}"
+        generated_texts = [gpt2_tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+        
+        # (Rest of the cleaning and selection process remains the same)
+        cleaned_texts = []
+        for text in generated_texts:
+            generated_part = text.split("Create a completely new, original message:")[-1].strip()
+            generated_part = generated_part.split('\n')[0].strip()
+            
+            if (len(generated_part.split()) >= 5 and 
+                len(generated_part.split()) <= 20 and 
+                not any(ex in generated_part for ex in examples) and
+                any(word in generated_part.lower() for word in metaphors + actions + qualities)):
+                cleaned_texts.append(generated_part)
+
+        if cleaned_texts:
+            generated_text = random.choice(cleaned_texts)
+        else:
+            metaphor = random.choice(metaphors)
+            action = random.choice(actions)
+            quality = random.choice(qualities)
+            generated_text = f"This text appears to have been {action} with {quality} {metaphor} precision!"
+
+        emojis = [⚡️", "🌌", "🔮", "🚀", "💫", "✨", "🤖", "🎯", "🎲", "🎮", "💻", "🔋", 
+                  "⚙️", "🧠", "💡", "🔬", "📡", "🎱", "🎨", "🎭", "🎪", "🎢", "🎠"]
+        emoji_count = random.randint(1, 3)
+        selected_emojis = random.sample(emojis, emoji_count)
+        
+        if not generated_text.endswith(("!", ".", "...")):
+            generated_text += random.choice(["!", "!!", "...!", "!?"])
+
+        return f"{' '.join(selected_emojis)} {generated_text} {' '.join(random.sample(emojis, random.randint(1, 2)))}"
 
 def generate_confidence_score_sentence(ai_score):
     """Generate a highly varied confidence score sentence using GPT-2."""
@@ -143,39 +151,55 @@ def generate_confidence_score_sentence(ai_score):
         "\n\nCreate a new, original observation:"
     )
 
-    response = requests.post(GPT2_API_URL, headers=headers, json={"inputs": prompt, "parameters": {"max_new_tokens": 50, "num_return_sequences": 5}})
-    response.raise_for_status()
-    generated_texts = response.json()
-
-    cleaned_texts = []
-    for text in generated_texts:
-        generated_part = text['generated_text'].split("Create a new, original observation:")[-1].strip()
-        generated_part = generated_part.split('\n')[0].strip()
-        
-        if (len(generated_part.split()) >= 8 and 
-            len(generated_part.split()) <= 25 and 
-            any(word in generated_part.lower() for word in subjects + ai_qualities)):
-            cleaned_texts.append(generated_part)
-
-    if cleaned_texts:
-        generated_text = random.choice(cleaned_texts)
-    else:
-        pattern = random.choice(patterns)
-        generated_text = pattern
-
-    confidence_phrases = [
-        f"with a confidence score of {ai_score:.2f}%",
-        f"showing {ai_score:.2f}% confidence",
-        f"reaching {ai_score:.2f}% on our AI-detection scale",
-        f"scoring {ai_score:.2f}% on the AI-meter",
-        f"hitting {ai_score:.2f}% on our detection radar"
-    ]
+    inputs = gpt2_tokenizer.encode(prompt, return_tensors="pt")
     
-    emojis = ["🤖", "📊", "📈", "🎯", "💯", "✨", "🔍", "⚡️", "🧠", "💫"]
-    emoji_count = random.randint(1, 2)
-    selected_emojis = " ".join(random.sample(emojis, emoji_count))
+    # Modified generation parameters to use beam search
+    with torch.no_grad():
+        outputs = gpt2_model.generate(
+            inputs,
+            max_new_tokens=50,
+            num_beams=5,  # Number of beams for beam search
+            num_return_sequences=5,  # Now supported with beam search
+            temperature=random.uniform(0.8, 0.9),
+            top_k=random.randint(45, 55),
+            top_p=random.uniform(0.92, 0.98),
+            repetition_penalty=random.uniform(1.1, 1.3),
+            no_repeat_ngram_size=3,
+            early_stopping=True,
+            pad_token_id=gpt2_tokenizer.eos_token_id
+        )
 
-    return f"{generated_text} {random.choice(confidence_phrases)} {selected_emojis}"
+        generated_texts = [gpt2_tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+        
+        cleaned_texts = []
+        for text in generated_texts:
+            generated_part = text.split("Create a new, original observation:")[-1].strip()
+            generated_part = generated_part.split('\n')[0].strip()
+            
+            if (len(generated_part.split()) >= 8 and 
+                len(generated_part.split()) <= 25 and 
+                any(word in generated_part.lower() for word in subjects + ai_qualities)):
+                cleaned_texts.append(generated_part)
+
+        if cleaned_texts:
+            generated_text = random.choice(cleaned_texts)
+        else:
+            pattern = random.choice(patterns)
+            generated_text = pattern
+
+        confidence_phrases = [
+            f"with a confidence score of {ai_score:.2f}%",
+            f"showing {ai_score:.2f}% confidence",
+            f"reaching {ai_score:.2f}% on our AI-detection scale",
+            f"scoring {ai_score:.2f}% on the AI-meter",
+            f"hitting {ai_score:.2f}% on our detection radar"
+        ]
+        
+        emojis = ["🤖", "📊", "📈", "🎯", "💯", "✨", "🔍", "⚡️", "🧠", "💫"]
+        emoji_count = random.randint(1, 2)
+        selected_emojis = " ".join(random.sample(emojis, emoji_count))
+
+        return f"{generated_text} {random.choice(confidence_phrases)} {selected_emojis}"
 
 def detect_extra_features(comment):
     """
@@ -224,25 +248,14 @@ def detect_extra_features(comment):
     return additional_info
 
 def analyze_comment(comment):
-    response = requests.post(ROBERTA_API_URL, headers=headers, json={"inputs": comment})
-    response.raise_for_status()
-    result = response.json()
-    print(f"Response for comment: {result}")  # Debugging information
-    
-    # Modified section to handle different response formats
-    if isinstance(result, list) and len(result) > 0:
-        if isinstance(result[0], dict):
-            if 'label' in result[0] and 'score' in result[0]:
-                probabilities = result[0]['score'] if result[0]['label'] == 'fake' else 1 - result[0]['score']
-            else:
-                probabilities = result[0].get('score', 0.5)
-        else:
-            probabilities = 0.5
-    else:
-        probabilities = 0.5
+    inputs = tokenizer(comment, return_tensors="pt", truncation=True, max_length=512)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        probabilities = torch.softmax(logits, dim=1).tolist()[0]
 
-    human_score = (1 - probabilities) * 100
-    ai_score = probabilities * 100
+    human_score = probabilities[0] * 100
+    ai_score = probabilities[1] * 100
     highlighted_comment = highlight_most_ai_like_phrases(comment)
 
     # Generate opening line and confidence score sentence using GPT-2
