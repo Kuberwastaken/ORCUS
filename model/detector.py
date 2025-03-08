@@ -112,7 +112,7 @@ def generate_dynamic_opening():
             quality = random.choice(qualities)
             generated_text = f"This text appears to have been {action} with {quality} {metaphor} precision!"
 
-        emojis = [⚡️", "🌌", "🔮", "🚀", "💫", "✨", "🤖", "🎯", "🎲", "🎮", "💻", "🔋", 
+        emojis = ["⚡", "🌌", "🔮", "🚀", "💫", "✨", "🤖", "🎯", "🎲", "🎮", "💻", "🔋",
                   "⚙️", "🧠", "💡", "🔬", "📡", "🎱", "🎨", "🎭", "🎪", "🎢", "🎠"]
         emoji_count = random.randint(1, 3)
         selected_emojis = random.sample(emojis, emoji_count)
